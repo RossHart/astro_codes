@@ -5,7 +5,7 @@ import numpy as np
 import math
 from astropy.coordinates import SkyCoord
 from astropy import units as u
-
+import matplotlib.pyplot as plt
 
 def match_sky(reference_data,match_data,reference_radec=['ra','dec'],match_radec=['ra','dec']):
     
@@ -33,7 +33,7 @@ def match_sky(reference_data,match_data,reference_radec=['ra','dec'],match_radec
     match_idx = np.arange(len(match_data))
     ids = Table(np.array([match_idx,idx,sep.arcsecond]).T
                 ,names=('match_index','reference_index','separation'))
-    
+
     print('{} galaxies in the reference catalogue'.format(len(reference_data)))
     print('{} galaxies in the match catalogue'.format(len(match_data)))
     print('---> {} matches in total'.format(len(ids)))
@@ -80,7 +80,7 @@ def keep_good_matches(matches,max_separation=1):
     
     order = np.argsort(matches['separation'])
     ordered_matches = matches[order]
-    _, unique_idx = np.unique(matches['reference_index'],return_index=True)
+    _, unique_idx = np.unique(ordered_matches['reference_index'],return_index=True)
     good_matches = ordered_matches[unique_idx]
     if max_separation != None:
         good_matches = good_matches[good_matches['separation'] <= max_separation]
@@ -137,14 +137,15 @@ def match_sky_restricted(reference_data,match_data,max_separation=10,max_dz=0.01
     
     ids = match_sky(reference_data,match_data,reference_radec,match_radec)
     good_ids = keep_good_matches(ids,max_separation)
+    
     if (max_dz != None) & (len(reference_xyz) == 3) & (len(match_xyz) == 3):
         good_ids, dz = check_redshift(reference_data,match_data,good_ids,z_names,max_dz)
     else:
         print('*No z-cut performed!')
         
     return good_ids
-
-
+  
+  
 def make_matched_catalogue(reference_data,match_data,ids):
     
     '''
@@ -175,8 +176,17 @@ def make_matched_catalogue(reference_data,match_data,ids):
     
     for c in columns:
         if 'str' not in match_data[c].dtype.name: # only keep data which isn't a string!
-            column_data = np.ones(len(reference_data))*(-999)
-            column_data[ids['reference_index'].astype(int)] = match_data[c][ids['match_index'].astype(int)]
+            row1 = match_data[c][0].data
+            # check if the item is a list:
+            is_list = isinstance(row1,np.ndarray)
+            if is_list:
+                N_subarray = np.shape(row1)
+                subarray_shape = (len(reference_data),) + N_subarray
+                column_data = np.ones(subarray_shape)*(-999)
+            else:
+                column_data = np.ones(len(reference_data))*(-999)
+            
+            column_data[ids['reference_index'].astype(int)] = match_data[c][[ids['match_index'].astype(int)]]
             match_table[c] = column_data
             
     return match_table
