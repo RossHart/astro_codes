@@ -245,7 +245,7 @@ def xy_kde(xy,bandwidth,N_grid=100,levels=[0.8,0.6,0.4,0.2]):
   
 def corner(xyz, ranges=None, fill=False, hist_fill_properties=None,
            contour_fill_properties=None,line_properties=None,fig_axarr=None,
-           levels=[0.2,0.4,0.6,0.8],max_n_ticks=5,zorder=0):
+           levels=[0.2,0.4,0.6,0.8],max_n_ticks=5,zorder=0,masks=None):
     '''
     ---Make a corner plot using my contour method.---
     
@@ -276,6 +276,9 @@ def corner(xyz, ranges=None, fill=False, hist_fill_properties=None,
     
     zorder: order to 'overlay' the plot. Default is 0.
     
+    masks: list of data 'masks' to keep only a speific subset. They will
+    be combined when x+y are plotted against each other.
+    
     Outputs:
     --------
     fig, axarr: figure and subplot axes. These can be used to plot an 
@@ -289,6 +292,7 @@ def corner(xyz, ranges=None, fill=False, hist_fill_properties=None,
         finite_xyz = np.array([np.isfinite(xyz[c]) for c in labels]).T
         keep_finite = np.min(finite_xyz,axis=1)
         xyz = xyz[keep_finite]
+        masks = [m[keep_finite] for m in masks]
         ranges = [(np.min(xyz[c]),np.max(xyz[c])) for c in labels]
 
     # Some magic numbers for pretty axis layout.
@@ -313,11 +317,16 @@ def corner(xyz, ranges=None, fill=False, hist_fill_properties=None,
 
     for i, x_column in enumerate(labels):
         x = xyz[x_column].data
+        if masks != None:
+            mask_x = masks[i]
+            x_hist = x[mask_x]
+        else:
+            x_hist = x.copy()
         ax = axarr[i,i]
         plt.sca(ax)
         # Plot the histograms.
-        _ = kde_histogram(x,fill=fill,fill_properties=hist_fill_properties,
-                          line_properties=line_properties,zorder=zorder)
+        _ = kde_histogram(x_hist,fill=fill,fill_properties=hist_fill_properties,
+                          line_properties=line_properties,zorder=zorder,x_range=ranges[i])
 
         # Set up the axes.
         plt.xlim(ranges[i])
@@ -332,9 +341,16 @@ def corner(xyz, ranges=None, fill=False, hist_fill_properties=None,
             [l.set_rotation(45) for l in ax.get_xticklabels()]
             ax.set_xlabel(labels[i])
             ax.xaxis.set_label_coords(0.5, -0.3)
+        ax.set_xlim(ranges[i])
   
         for j, y_column in enumerate(labels):
             y = xyz[y_column].data
+            if masks != None:
+                mask_xy = masks[j]*masks[i]
+                x_plot = x[mask_xy]
+                y_plot = y[mask_xy]
+            else:
+                y_plot = y.copy()
             ax = axarr[i,j]
             plt.sca(ax)
             if j > i:
@@ -345,8 +361,9 @@ def corner(xyz, ranges=None, fill=False, hist_fill_properties=None,
             elif j == i:
                 continue
 
-            _ = kde_contour(y,x,fill=fill,fill_properties=contour_fill_properties,
-                            line_properties=line_properties,levels=levels,zorder=zorder)
+            _ = kde_contour(y_plot,x_plot,fill=fill,fill_properties=contour_fill_properties,
+                            line_properties=line_properties,levels=levels,zorder=zorder,
+                            xy_range=(ranges[j][0],ranges[j][1],ranges[i][0],ranges[i][1]))
 
             ax.xaxis.set_major_locator(MaxNLocator(max_n_ticks, prune="lower"))
             ax.yaxis.set_major_locator(MaxNLocator(max_n_ticks, prune="lower"))
@@ -365,5 +382,8 @@ def corner(xyz, ranges=None, fill=False, hist_fill_properties=None,
                 if labels is not None:
                     ax.set_ylabel(labels[i])
                     ax.yaxis.set_label_coords(-0.3, 0.5)
+           
+            ax.set_xlim(ranges[j])
+            ax.set_ylim(ranges[i])
 
     return fig, axarr
