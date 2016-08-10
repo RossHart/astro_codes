@@ -6,7 +6,7 @@ from astropy.cosmology import FlatLambdaCDM
 cosmo=FlatLambdaCDM(H0=70,Om0=0.3) # Use standard cosmology model from astropy.
 
 
-def get_sample_limits(z_limit,mag_limit):
+def get_sample_limits(z_limit,mag_limit,color=0.75):
     '''
     ---Given a redshift and a magnitude limit, calculate an
     absolute magnitude limit---
@@ -17,14 +17,16 @@ def get_sample_limits(z_limit,mag_limit):
     
     mag_limit: apparent magnitude limit of the sample (eg. 17.0 for normal depth SDSS).
     
+    color: g-r colour to calculate k-corrections.
+    
     Outputs:
     --------
     M_limit: absolute magnitude limit.
     '''
 
     D_max = (10**6)*(np.array(cosmo.luminosity_distance([z_limit]))[0])
-    k_val = calc_kcor('r',z_limit,'g - r',0.75) # value of 0.75 is arbitrarily selected here!
-    M_limit = mag_limit - 5*(math.log10(D_max) - 1) - k_val
+    #k_val = calc_kcor('r',z_limit,'g - r',color) # value of 0.75 is arbitrarily selected here!
+    M_limit = mag_limit - 5*(math.log10(D_max) - 1) #- k_val
 
     return M_limit
 

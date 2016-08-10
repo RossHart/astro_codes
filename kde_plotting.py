@@ -256,7 +256,7 @@ def corner(xyz, ranges=None, fill=False, hist_fill_properties=None,
     ranges: list of N_columns ranges. If set to None, then the ranges will
     simply be the ranges of the data. 
     
-    fill: if True, conour+ histograms will be filled.
+    fill: if True, contour+ histograms will be filled.
     
     hist_fill_properties: histogram fill properties (see the kde_histogram 
     module for details).
@@ -306,7 +306,7 @@ def corner(xyz, ranges=None, fill=False, hist_fill_properties=None,
 
     # Create a new figure if one wasn't provided.
     if fig_axarr is None:
-        fig, axarr = plt.subplots(K, K, figsize=(20,20))
+        fig, axarr = plt.subplots(K, K, figsize=(10,10))
         # format the figure
         lb = lbdim / dim
         tr = (lbdim + plotdim) / dim

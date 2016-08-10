@@ -117,9 +117,7 @@ def get_mass_limit(data,z_limit,mag_limit,mass_equation,low_z_limit=None,column_
     
     Outputs:
     --------
-    limit_table: table of reshifts with corresponding Magnitude and mass limits.
-    
-    fit_paramaters: best fit parameters of the form logM* = alog(z) + b 
+    logmass: log stellar mass limit.
     '''
     
     z_column, Mag_column = column_names

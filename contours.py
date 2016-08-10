@@ -5,54 +5,14 @@ from sklearn.preprocessing import scale
 from sklearn.cross_validation import KFold
 from sklearn.grid_search import GridSearchCV
 from sklearn.neighbors import KernelDensity
+from astroML.linear_model import NadarayaWatson
 
 def kde_contour(x,y,xy_range=None,bandwidth=None,fill=False,fill_properties=None,
                 line_properties=None,levels=[0.2,0.4,0.6,0.8],n_folds=3,
-                printout=False,N_max=1000,zorder=0):
-    '''
-    ---Create a contour plot, given a set of values. A KDE is applied, with
-    either a given bandwidth or one from CV method.---
-    
-    Inputs:
-    -------
-    x,y: the x and y data (1D arrays).
-    
-    xy_range: list or tuple of 4 values (x_min,x_max,y_min,y_max). Default is
-    None, in which case the range is simply the min/max of the datasets.
-    
-    bandwidth: bandwidth of the KDE. If set as None, then CV method is applied
-    to find the best value.
-    
-    fill: if True, a filled contour is created.
-    
-    fill_properties: _dictionary_ of terms for the contour fill. Has the values
-    'colormap' and 'alpha' (default are 'Greys' and 0.5).
-    
-    line_properties: _dictionary_ of line properties. Has the values 'color',
-    'alpha','linewidth' and 'linestyle' (defaults are 'k', 1, 1 + 'solid').
-    
-    levels: list of levels to plot containing a fraction of the points 
-    (default is [0.2,0.4,0.6,0.8]).
-    
-    n_folds: number of folds in the CV data.
-    
-    printout: if True, the 'best' bandwidth is printed.
-    
-    N_max: maximum number of points to do the cross-validation on. If more data points
-    are provided, a random selection will be used.
-    
-    zorder: where to 'overlay' the plot.    
-    
-    Outputs:
-    --------
-    
-    x_grid, y_grid: x and y points for the contour.
-    
-    H: contour 'heights'
-    
-    V: levels to plot in the contour (corresponding to the 'levels' input)
-    '''
-    
+                printout=False,N_max=1000,zorder=0,weights=None):
+  
+    np.random.seed(0)
+
     # set the line + fill properties here:
     ####################################
     fp = {'colormap':'Greys',
@@ -99,7 +59,8 @@ def kde_contour(x,y,xy_range=None,bandwidth=None,fill=False,fill_properties=None
         bandwidths = np.logspace(-2,0,N_steps)
         bandwidth, _ = cross_validate(xy_scaled_cv,bandwidths,n_folds)
 
-    H, V, x_grid_scaled, y_grid_scaled = xy_kde(xy_scaled,bandwidth,levels=levels) 
+    H, V, x_grid_scaled, y_grid_scaled, bandwidth = xy_kde(xy_scaled,bandwidth,levels=levels,
+                                                weights=weights) 
     # KDE from obtained bandwidths
     x_grid = x_mean+ (x_std*x_grid_scaled)
     y_grid = y_mean + (y_std*y_grid_scaled)
@@ -111,7 +72,7 @@ def kde_contour(x,y,xy_range=None,bandwidth=None,fill=False,fill_properties=None
     plt.contour(x_grid,y_grid,H,levels=V,linewidths=lp['linewidth'],colors=lp['color'],
                 linestyles=lp['linestyle'],alpha=lp['alpha'],zorder=zorder)
         
-    return x_grid, y_grid, H, V
+    return x_grid, y_grid, H, V, bandwidth
 
 
 def cross_validate(test_data,bandwidths,n_folds=5):
@@ -122,7 +83,7 @@ def cross_validate(test_data,bandwidths,n_folds=5):
     return grid.best_estimator_.bandwidth,grid
 
 
-def xy_kde(xy,bandwidth,N_grid=100,levels=[0.8,0.6,0.4,0.2]):  
+def xy_kde(xy,bandwidth,N_grid=100,levels=[0.8,0.6,0.4,0.2],weights=None):  
     
     x_edges = np.linspace(np.min(xy[:,0]),np.max(xy[:,0]),N_grid+1)
     y_edges = np.linspace(np.min(xy[:,1]),np.max(xy[:,1]),N_grid+1)
@@ -134,6 +95,11 @@ def xy_kde(xy,bandwidth,N_grid=100,levels=[0.8,0.6,0.4,0.2]):
     xy_grid = np.array([np.ravel(x_grid),np.ravel(y_grid)]).T
     kde = KernelDensity(kernel='gaussian', bandwidth=bandwidth).fit(xy)
     H = np.exp(kde.score_samples(xy_grid).reshape(N_grid,N_grid))
+    if weights != None:
+        weighting_kde = NadarayaWatson('gaussian',h=bandwidth)
+        weighting_kde.fit(xy,weights)
+        W = weighting_kde.predict(xy_grid).reshape((N_grid,N_grid))
+        H = H*W
     # this bit is taken from the corner_plot.py method.
     ######################################
     Hflat = H.flatten()
@@ -150,4 +116,4 @@ def xy_kde(xy,bandwidth,N_grid=100,levels=[0.8,0.6,0.4,0.2]):
     #####################################
     V = np.sort(V)
     
-    return H, V, x_grid, y_grid
+    return H, V, x_grid, y_grid, bandwidth

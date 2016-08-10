@@ -176,7 +176,7 @@ def make_matched_catalogue(reference_data,match_data,ids):
     
     for c in columns:
         if 'str' not in match_data[c].dtype.name: # only keep data which isn't a string!
-            row1 = match_data[c][0].data
+            row1 = match_data[c][0]
             # check if the item is a list:
             is_list = isinstance(row1,np.ndarray)
             if is_list:
