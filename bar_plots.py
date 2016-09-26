@@ -127,6 +127,7 @@ def comparison_bar_chart(table,labels,colors,normalise=None,width=0.5,alpha=1
         
         plt.bar(class_lefts,class_f,width=class_width,label=labels[n]
                 ,alpha=alpha,color=colors[n],lw=linewidth,edgecolor=linecolor,linewidth=linewidth)
+
         _ = plt.errorbar(class_centres,class_f, yerr=[class_low_error,class_high_error]
                          ,markersize=None,ecolor=linecolor,capsize=4,elinewidth=linewidth
                          ,linewidth=0,capthick=linewidth)
