@@ -5,6 +5,34 @@ import math
 import astropy.units as u
 import copy
 
+def L_22_to_SFR(L_22,eta=0.17,input_log=True,output_log=True):
+  
+  if input_log is True:
+      L_22 = 10**L_22
+  
+  sfr = (1-eta)*(10**(-9.125))*L_22
+  
+  if output_log is True:
+      return np.log10(sfr)
+  else:
+      return sfr
+    
+
+def L_FUV_to_SFR(L_FUV,input_log=True,output_log=True):
+  
+  if input_log is True:
+      L_FUV = 10**L_FUV
+  
+  sfr = (10**(-9.69))*L_FUV
+  sfr = sfr*(10**(-0.03)) # Kroupa -> Chabrier
+  
+  if output_log is True:
+      return np.log10(sfr)
+  else:
+      return sfr
+    
+
+
 def L12_to_sfr(L12,log=True,snr=None):
     ''' 
     Function for converting luminosities to SFRs using the WISE 12 micron,
@@ -70,12 +98,6 @@ def L22_to_sfr(L22,log=True,snr=None):
         sigma_sfr = np.log10(10**(-9.08)*(L22/snr)) + 0.2 # 0.2 dex scatter
         # in the relations.
         return log_sfr, sigma_sfr
-      
-     
-def Mag_to_lum(Mag):
-    S = 3631*10**(Mag/-2.5)*u.Jy # AB -> flux density
-    L = S*(4*math.pi)*(10*u.pc)**2 # absolute magnitude = 10pc
-    return L.to(u.erg/u.s/u.Hz)
   
   
 def FUV_to_sfr(FUV,snr=None):

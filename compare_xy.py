@@ -2,6 +2,7 @@ from astropy.table import Table, column
 import numpy as np
 import math
 import matplotlib.gridspec as gridspec
+import matplotlib.pyplot as plt
 from contours import kde_contour
 
 def make_figure(xlabel='x', ylabel='y'):
@@ -92,7 +93,7 @@ def compare_xy_data(x,y,xy_range,N_bins,weights=None,xlabel='x',ylabel='y',
            'alpha':0.5}  
 
     h_fp = {'color':'k',
-            'alpha':0.5}
+            'alpha':1}
     
     lp = {'color':'k',
           'alpha':1,

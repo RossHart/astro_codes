@@ -3,6 +3,7 @@ import math
 from astropy.table import Table, column
 from scipy.stats import binned_statistic
 from astroML.resample import bootstrap
+import weightedstats as ws
 
 def get_line(x,y,bins=12,ranges=None,use_bootstrap=False,percentiles=(16,84)):
 

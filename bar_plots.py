@@ -69,7 +69,7 @@ def get_tables_with_errors(table,normalise='fraction',error=True,column_totals=N
     
 
 def comparison_bar_chart(table,labels,colors,normalise=None,width=0.5,alpha=1
-                         ,linewidth=3,linecolor='k',ylabel='N',column_totals=None):
+                         ,linewidth=3,linecolor='k',ylabel='N',column_totals=None,right_space=2):
     
     '''
     --- Compare number of objects that fit into certain categories. 
@@ -94,6 +94,8 @@ def comparison_bar_chart(table,labels,colors,normalise=None,width=0.5,alpha=1
     
     column_totals: List of totals for each of the coluns (length = N_columns). 
     If None, then the column total is the sum of that column.
+    
+    right_space: space left on the right hand side of the plot, for fitting the legend.
     
     Outputs:
     --------
@@ -132,7 +134,7 @@ def comparison_bar_chart(table,labels,colors,normalise=None,width=0.5,alpha=1
                          ,markersize=None,ecolor=linecolor,capsize=4,elinewidth=linewidth
                          ,linewidth=0,capthick=linewidth)
     plt.legend(fontsize=15)
-    plt.xlim(column_centres[0]-1,column_centres[-1]+2)
+    plt.xlim(column_centres[0]-1,column_centres[-1]+right_space)
     plt.xticks(column_centres,column_labels)
     plt.ylabel(ylabel)
     

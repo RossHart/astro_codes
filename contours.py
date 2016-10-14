@@ -99,7 +99,7 @@ def kde_contour(x,y,xy_range=None,bandwidth=None,fill=False,fill_properties=None
         y_range = [xy_range[2],xy_range[3]]
     x, y = xy[:,0][select_xy], xy[:,1][select_xy]
     if weights is not None:
-        weights[select_xy]
+        weights = weights[select_xy]
     
     # scale the data -> get an optimum bandwidth:
     x_mean, x_std, y_mean, y_std = [np.mean(x),np.std(x),np.mean(y),np.std(y)]
