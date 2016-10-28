@@ -71,7 +71,7 @@ def match_ids(reference_data,match_data,reference_column='id',match_column='id')
     
     print('{} galaxies in the reference catalogue'.format(len(reference_data)))
     print('{} galaxies in the match catalogue'.format(len(match_data)))
-    print('---> {} matches in toal'.format(len(ids)))
+    print('---> {} matches in total'.format(len(ids)))
     
     return ids
 
@@ -154,7 +154,7 @@ def make_matched_catalogue(reference_data,match_data,ids):
     
     Inputs:
     -------
-    reference_data: usually the catlogue we wish to match to (eg. galaxies in GZ).
+    reference_data: usually the catalogue we wish to match to (eg. galaxies in GZ).
     
     match_data: usually a subsidiary dataset, eg. detections in AFALFA, WISE, ...
     
@@ -185,8 +185,12 @@ def make_matched_catalogue(reference_data,match_data,ids):
                 column_data = np.ones(subarray_shape)*(-999)
             else:
                 column_data = np.ones(len(reference_data))*(-999)
-            
             column_data[ids['reference_index'].astype(int)] = match_data[c][[ids['match_index'].astype(int)]]
-            match_table[c] = column_data
+            
+        else:
+            column_data = np.chararray(len(reference_data),itemsize=32)
+            column_data[ids['reference_index'].astype(int)] = match_data[c][[ids['match_index'].astype(int)]]
+        
+        match_table[c] = column_data
             
     return match_table
