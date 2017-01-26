@@ -3,20 +3,17 @@ import math
 import numpy as np
 import astropy.units as u
 import astropy.constants as const
+from astropy.cosmology import FlatLambdaCDM
+from astropy.coordinates import Distance
+cosmo = FlatLambdaCDM(H0=70, Om0=0.3)
 
 
 def z_to_dist(z):
-    c = const.c
-    H_0 = 70*(u.km/u.s/u.Mpc)
-    D = (c/H_0*z).to(u.Mpc)
-    return D
+    return cosmo.luminosity_distance(z)
 
 
 def dist_to_z(D):
-    c = const.c
-    H_0 = 70*(u.km/u.s/u.Mpc)
-    z = (H_0/c)*D
-    return z.to(u.dimensionless_unscaled)
+    return Distance.compute_z(D,cosmo)
 
 
 def mag_to_Mag(mag,z):
@@ -27,9 +24,15 @@ def mag_to_Mag(mag,z):
 
 def Mag_to_mag(Mag,z):
     D = z_to_dist(z)
-    Mag = Mag + 5*(np.log10(D/(u.pc))-1)
-    return Mag
-
+    mag = Mag + 5*(np.log10(D/(u.pc))-1)
+    return mag
+  
+  
+def Mag_to_z(Mag,mag=17):
+    D = 10**((mag-Mag+5)/5)*(u.pc)
+    z = dist_to_z(D)
+    return z
+ 
     
 def Mag_to_flux_density(Mag):
     S = 3631*10**(Mag/-2.5)*u.Jy # AB -> flux density

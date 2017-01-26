@@ -71,7 +71,7 @@ def histogram(x,bins='knuth',x_range=None,fill=False,
     if bins is 'knuth':
         _, bins = get_knuth_bins(x_plot)
     elif isinstance(bins, int) is True:
-        bins = np.linspace(x_range(0),x_range[1],bins)
+        bins = np.linspace(x_range[0],x_range[1],bins)
     elif isinstance(bins, (list,np.ndarray)) is True:
         bins = bins
     

@@ -1,6 +1,7 @@
-import urllib
-from PIL import Image
+import os
 import matplotlib.pyplot as plt
+from PIL import Image
+import urllib
 
 def display_image(url_name,crop_in=100):
     '''
@@ -25,3 +26,5 @@ def display_image(url_name,crop_in=100):
     plt.xticks([])
     plt.yticks([])
     return None
+  
+    
