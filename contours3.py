@@ -8,6 +8,42 @@ from find_nearest import find_nearest_index
 from masking import select_within_range
 
 
+def scale_data(data):
+    data_mean = np.mean(data)
+    data_std = np.std(data)
+    data_scaled = (data-data_mean)/data_std
+    return data_scaled, data_mean, data_std
+
+
+def unscale_data(data_scaled,data_mean,data_std):
+    data_unscaled = data_scaled*data_std + data_mean
+    return data_unscaled
+  
+
+def set_line_properties(line_properties=None):
+    lp_final = {'color':'k',
+                'alpha':1,
+                'linewidth':1,
+                'linestyle':'solid'}
+    
+    if line_properties is not None:
+        for l in line_properties.keys():
+            lp_final[l] = line_properties[l]
+    
+    return lp_final
+
+
+def set_contour_fill_properties(fill_properties=None):
+    fp_final = {'colormap':'Greys',
+                'alpha':1}  
+
+    if fill_properties is not None:
+        for f in fill_properties.keys():
+            fp_final[f] = fill_properties[f]
+    
+    return fp_final
+
+
 def xyz_contour(x,y,z,x_range=None,y_range=None,
                 N_max=1000,n_folds=3,gamma=None,
                 zorder=0,line_properties=None,
@@ -90,11 +126,13 @@ def plot_contour(x_grid,y_grid,H,V,fill=False,line=True,zorder=0,
     lp = set_line_properties(line_properties)
     
     if fill is True:
-        plt.contourf(x_grid,y_grid,H,levels=np.append(V,np.max(H))
+        f = plt.contourf(x_grid,y_grid,H,levels=np.append(V,np.max(H))
                      ,cmap=fp['colormap'],alpha=fp['alpha'],zorder=zorder)
+        #plt.colorbar(f)
     if line is True:
         plt.contour(x_grid,y_grid,H,levels=V,linewidths=lp['linewidth'],colors=lp['color'],
                     linestyles=lp['linestyle'],alpha=lp['alpha'],zorder=zorder)
+    
     
     return None
 
@@ -112,7 +150,6 @@ def xyz_kde(xyz,gamma,N_grid=100):
     x_grid, y_grid = np.meshgrid(x_centres,y_centres)
     xy_grid = np.array([np.ravel(x_grid),np.ravel(y_grid)]).T
     clf = KernelRidge(kernel='rbf',gamma=gamma).fit(xy,z)
-    #print(xy_grid.shape,x_grid.shape)
     H = clf.predict(xy_grid).reshape(N_grid,N_grid)
     return H, x_grid, y_grid, gamma
 

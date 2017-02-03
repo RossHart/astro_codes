@@ -10,7 +10,8 @@ def assign_bins(x,x_range=None,equal_N=True,N_bins=10):
     in_range = (x >= x_range[0]) & (x <= x_range[1])
     
     if equal_N is False:
-        bin_edges = np.linspace(x_range[0],x_range[1]+1,N_bins+1)
+        bin_edges = np.linspace(x_range[0],x_range[1],N_bins+1)
+        bin_edges[-1] += 1
         bin_assignments = np.digitize(x,bin_edges)
     else:
         N_x = len(x)
