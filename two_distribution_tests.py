@@ -49,8 +49,8 @@ def bhattacharyya_coefficient(a,b,x_range=None,bins=100):
     '''
   
     if x_range is None:
-        x_range = (np.min((a.min(),b.min())),
-		   np.max((a.max(),b.max())))
+        x_range = (min((np.min(a),np.min(b))),
+                   max((np.max(a),np.max(b))))
     
     if type(bins) is int:
         bins = np.linspace(*x_range,num=bins)

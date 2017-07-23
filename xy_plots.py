@@ -1,98 +1,146 @@
 from astropy.table import Table, column
+from bin_statistics import assign_bins, StatsFunctions, TableStats
 import matplotlib.pyplot as plt
 import math
 import numpy as np
-from bin_statistics import stats_functions, assign_bins
 from scipy.stats import spearmanr
 from two_distribution_tests import bhattacharyya_coefficient
 
 class x_vs_y:
     
-    def __init__(self,color='k',linewidth=2,marker='o',markersize=5,
-                 x_range=None,y_range=None,equal_N=False,bins=10,location='upper left'):
-        self.color = color
-        self.linewidth = linewidth
-        self.marker = marker
-        self.markersize = markersize
-        self.x_range = x_range
-        self.bins = bins
+    def __init__(self,x,y,weights=None,x_range=None,y_range=None):
+        self.x = x
+        self.y = y
+        self.weights = weights
         self.x_range = x_range
         self.y_range = y_range
-        self.equal_N = equal_N
-        self.bins = bins
-        self.location = location
-    
-    def discrete_vs_continuous(self,ax,x,y):
-        y_table = stats_functions().mean_and_error(y,x)
-        y_error = y_table['mean+1sigma'] - y_table['mean']
-        x_plot = np.unique(x)
-        y_plot = y_table['mean']
         
-        _, caps, _ = ax.errorbar(x_plot,y_plot,y_error,color=self.color,
-                                 fmt=self.marker,elinewidth=self.linewidth,
-                                 markersize=self.markersize)
-        for cap in caps:
-            cap.set_color(self.color)
-            cap.set_markeredgewidth(self.linewidth)
+    def discrete_vs_continuous_binned_mean(self):
+        x = self.x
+        y = self.y
+        w = self.weights
+        
+        self.x_table = Table(np.unique(x)[:,np.newaxis],names=['mean'])
+        self.y_table = TableStats(y,x,w).mean_and_error()
+        return self
+      
+    def discrete_vs_continuous_binned_median(self):
+        x = self.x
+        y = self.y
+        w = self.weights
+        
+        self.x_table = Table(np.unique(x)[:,np.newaxis],names=['mean'])
+        self.y_table = TableStats(y,x,w).median_and_error()
+        return self
+    
+    def continuous_vs_continuous_binned_mean(self,bin_assignments=None,bins=10,
+                                             equal_N=False):
+        x = self.x
+        y = self.y
+        w = self.weights
+        x_range = self.x_range
+        y_range = self.y_range
+        if bin_assignments is None:
+            bin_assignments = assign_bins(x,x_range,equal_N,bins)
+        self.x_table = TableStats(x,bin_assignments,w).mean_and_error()
+        self.y_table = TableStats(y,bin_assignments,w).mean_and_error()
+        return self
+      
+    def continuous_vs_continuous_binned_median(self,bin_assignments=None,bins=10,
+                                               equal_N=False):
+      
+        x = self.x
+        y = self.y
+        w = self.weights
+        x_range = self.x_range
+        y_range = self.y_range
+        if bin_assignments is None:
+            bin_assignments = assign_bins(x,x_range,equal_N,bins)
+        self.x_table = TableStats(x,bin_assignments,w).median_and_error()
+        self.y_table = TableStats(y,bin_assignments,w).median_and_error()
+        return self
+            
+    
+    def line_plot(self,ax,offset=0,**kwargs):
+        x_plot = np.array(self.x_table['mean'])
+        y_plot = np.array(self.y_table['mean']) + offset
+        _ = ax.plot(x_plot,y_plot,**kwargs)
         return None
     
-    def continuous_vs_continuous(self,ax,x,y):
-        bin_assignments = assign_bins(x,self.x_range,self.equal_N,self.bins)
-        x_table = stats_functions().mean_and_error(x,bin_assignments)
-        y_table = stats_functions().mean_and_error(y,bin_assignments)
-        x_plot, y_plot = x_table['mean'], y_table['mean']
-        y_error = y_table['mean+1sigma'] - y_table['mean']
-        _, caps, _ = ax.errorbar(x_plot,y_plot,y_error,color=self.color,
-                                 fmt=self.marker,elinewidth=self.linewidth,
-                                 markersize=self.markersize)
-        for cap in caps:
-            cap.set_color(self.color)
-            cap.set_markeredgewidth(self.linewidth)
-        
-        return None
-    
-    def continuous_vs_discrete(self,x,y):
-        x_table = stats_functions().mean_and_error(x,y)
-        x_error = x_table['mean+1sigma'] - x_table['mean']
-        y_plot = np.unique(y)
-        y_plot = x_table['mean']
-        ax.plot(x_plot,y_plot,color=self.color,
-                fmt=self.marker,markersize=self.markersize)
-        
-        return None
-    
-    def location_to_value(self):
-        if self.location is 'upper right':
-            return 0.95, 0.95, 0.95, 0.85, 'right', 'top'
-        elif self.location is 'lower left':
-            return 0.05, 0.15, 0.05, 0.05, 'left', 'bottom'
-        elif self.location is 'lower right':
-            return 0.95, 0.15, 0.95, 0.05, 'right', 'bottom'
+    def error_plot(self,ax,style='filled',offset=0,plus=0,**kwargs):
+        x_plot = np.array(self.x_table['mean'])
+        y_plot = np.array(self.y_table['mean'])
+        y_lower = np.array(self.y_table['mean-1sigma']) + offset + plus
+        y_upper = np.array(self.y_table['mean+1sigma']) + offset - plus
+        if style is 'filled':
+            _ = ax.fill_between(x_plot,y_lower,y_upper,**kwargs)
+        elif style is 'lined':
+            _ = ax.plot(x_plot,y_lower,**kwargs)
+            _ = ax.plot(x_plot,y_upper,**kwargs)
         else:
-            return 0.05, 0.95, 0.05, 0.85, 'left', 'top'
-        
-    def show_spearmanr(self,ax,x,y):
-        x1, y1, x2, y2, ha, va = x_vs_y().location_to_value()
-        r, p = spearmanr(x,y)
-        r_string = r'$r_s = {}$'.format(np.round(r,decimals=2))
-        p_string = '$p = {}$'.format(np.round(p,decimals=2))
-        ax.text(x1,y1,r_string,ha=ha,va=va,transform=ax.transAxes)
-        ax.text(x2,y2,p_string,ha=ha,va=va,transform=ax.transAxes)
+            yerrs = [y_upper-y_plot,y_plot-y_lower]
+            _ = ax.errorbar(x_plot,y_plot,yerrs,**kwargs)
         return None
     
-    def show_bhattacharyya(self,ax,x,y,bhattacharyya_bins):
-        x1, y1, x2, y2, ha, va = x_vs_y().location_to_value()
-        unique_bins = np.unique(x)
-        BC = []
-        D_B = []
+    def spearmanr(self,ax,plot=True,printout=False,location=None,
+                  spacing=0.05,x_offset=0.05,y_offset=0.05,**kwargs):
+        x1, y1, x2, y2, ha, va = self.location_to_value(location,spacing,
+                                                        x_offset,y_offset)
+        
+        r, p = spearmanr(self.x,self.y)
+        r_string = r'$r_s = {}$'.format(np.round(r,decimals=2))
+        if 0.001 < p <= 0.1:
+            p_string = r'$p = 10^{{{}}}$'.format(int(np.round(math.log10(p),decimals=0)))
+        elif 0.1 < p <= 1:
+            p_string = r'$p = {}$'.format(np.round(p,decimals=2))
+        else:
+            p_string = r'$p < 10^{-3}$'
+        if plot is True:
+            ax.text(x1,y1,r_string,ha=ha,va=va,transform=ax.transAxes,**kwargs)
+            ax.text(x2,y2,p_string,ha=ha,va=va,transform=ax.transAxes,**kwargs)
+        if printout is True:
+            print(r_string, p_string)
+        return r_string, p_string
+        
+        
+    def location_to_value(self,location,spacing=0.05,x_offset=0.05,y_offset=0.05):
+        if location == 'upper right':
+            return (1-x_offset, 1-y_offset,1-x_offset, 1-y_offset-spacing,
+                    'right', 'top')
+        elif location == 'lower left':
+            return (x_offset, y_offset+spacing, x_offset, y_offset,
+                    'left', 'bottom')
+        elif location == 'lower right':
+            return (1-x_offset, y_offset+spacing, 1-x_offset, y_offset, 
+                    'right', 'bottom')
+        else:
+            return (x_offset, 1-y_offset, x_offset, 1-y_offset-spacing, 
+                    'left', 'top')
+    
+    def show_bhattacharyya(self,ax,bhattacharyya_bins,location='upper right',
+                           printout=False,show=True,**kwargs):
+        x1, y1, x2, y2, ha, va = self.location_to_value(location)
+        unique_bins = np.unique(self.x)
+        BC, D_B, N = [], [], []
         for i, _ in enumerate(unique_bins[:-1]):
             bin_0, bin_1 = unique_bins[i], unique_bins[i+1]
-            a, b = y[x == bin_0], y[x == bin_1]
+            a, b = self.y[self.x == bin_0], self.y[self.x == bin_1]
             BC_i, D_B_i = bhattacharyya_coefficient(a,b,bins=bhattacharyya_bins)
             BC.append(BC_i)
             D_B.append(D_B_i)
-        BC_string = r'$\overline{{BC}} = {}$'.format(np.round(np.mean(BC),decimals=2))
-        D_B_string = '$\overline{{D_B}} = {}$'.format(np.round(np.mean(D_B),decimals=2))
-        ax.text(x1,y1,BC_string,ha=ha,va=va,transform=ax.transAxes)
-        ax.text(x2,y2,D_B_string,ha=ha,va=va,transform=ax.transAxes)
+            N.append(min(len(a),len(b)))
+        BC_string = r'$\overline{{BC}} = {}$'.format(np.round(np.average(BC,weights=N),
+                                                              decimals=2))
+        D_B_string = '$\overline{{D_B}} = {}$'.format(np.round(np.average(D_B,weights=N),
+                                                               decimals=2)) 
+        if show == True:
+            ax.text(x1,y1,BC_string,ha=ha,va=va,transform=ax.transAxes,**kwargs)
+            ax.text(x2,y2,D_B_string,ha=ha,va=va,transform=ax.transAxes,**kwargs)
+        if printout == True:
+            print(BC_string, D_B_string)
         return None
+    
+    def scatter(self,ax,**kwargs):
+        ax.scatter(self.x,self.y,**kwargs)
+        return None
+

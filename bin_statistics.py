@@ -9,7 +9,12 @@ def assign_bins(x,x_range=None,equal_N=True,N_bins=10):
     
     in_range = (x >= x_range[0]) & (x <= x_range[1])
     
-    if equal_N is False:
+    if isinstance(N_bins,(list,np.ndarray)) is True:
+        bin_assignments = np.digitize(x,N_bins)
+        bin_assignments[bin_assignments < N_bins.min()] = -999
+        bin_assignments[bin_assignments > N_bins.max()] = -999
+    
+    elif equal_N is False:
         bin_edges = np.linspace(x_range[0],x_range[1],N_bins+1)
         bin_edges[-1] += 1
         bin_assignments = np.digitize(x,bin_edges)
@@ -33,82 +38,187 @@ def get_fractional_errors(k,n,c=0.683):
     return p_lower,p_upper
 
 
-class stats_functions:
+class StatsFunctions():
+    
+    def __init__(self,data,weights=None):
+        self.data = data
+        self.weights = weights
         
-    def __init__(self,percentiles=(16,84),sigmas=(1,2),c=(0.683)):
-        self.percentiles = ([percentiles] if isinstance(percentiles,int) | isinstance(percentiles,float) 
-                            else percentiles)
-        self.sigmas = ([sigmas] if isinstance(sigmas,int) | isinstance(sigmas,float) 
-                       else sigmas)
-        self.c = ([c] if isinstance(c,int) | isinstance(c,float) 
-                  else c)
+    def percentiles(self,percentiles):
+        data = self.data
+        weights = self.weights
+        if weights is None:
+            return np.percentile(data, percentiles)
+        else:
+            indices = np.argsort(data)
+            d_i = data[indices]
+            w_i = weights[indices]
+            p = w_i.cumsum()/w_i.sum()*100
+            y = np.interp(percentiles, p, d_i)
+            return y
+    
+    def mean_and_deviation(self):
+        data = self.data
+        weights = self.weights
+        if weights is None:
+            return np.mean(data), np.std(data)
+        else:
+            mean = np.average(data,weights=weights)
+            variance = np.average((data-mean)**2,weights=weights)  # Fast and numerically precise
+            return mean, math.sqrt(variance)
+    
+    def mean_and_error(self):
+        data = self.data
+        weights = self.weights
+        N_scaler = np.sqrt(len(data))
+        if weights is None:
+            return np.mean(data), np.std(data)/N_scaler
+        else:
+            mean = np.average(data,weights=weights)
+            variance = np.average((data-mean)**2,weights=weights)  # Fast and numerically precise
+            return mean, math.sqrt(variance)/N_scaler
 
-    def median_and_percentile(self,data,bins):
+
+class TableStats():
+    
+    def __init__(self,data,bins,weights=None,c=0.683):
+        self.data = data
+        self.bins = bins
+        self.weights = weights
+        self.c = c
+        
+    def list_(self,values):
+        values = ([values] if isinstance(values,int) | isinstance(values,float) 
+                            else values)
+        return values
+    
+    def median_and_percentile(self,percentiles=(16,84)):
+        data = self.data
+        bins = self.bins
+        weights = self.weights
+        percentiles = self.list_(percentiles)
+        
         output_table = Table()
         N_bins = np.unique(bins)
-        N_bins = N_bins[N_bins > 0]
-        medians = [np.median(data[bins == b]) for b in N_bins]
-        maxs = [np.max(data[bins == b]) for b in N_bins]
-        mins = [np.min(data[bins == b]) for b in N_bins]
-        means = [np.mean(data[bins == b]) for b in N_bins]
-        standard_deviations = [np.mean(data[bins == b]) for b in N_bins]
-        standard_errors = [np.mean(data[bins == b]) for b in N_bins]
-        output_table['median'] = medians
-        output_table['max'] = maxs
-        output_table['min'] = mins
-        for p in self.percentiles:
-            percentiles = [np.percentile(data[bins == b],p) for b in N_bins]
-            output_table['{} percentile'.format(p)] = percentiles
+        N_bins = N_bins[N_bins > 0]       
+        
+        if weights is None:
+            median_list = [StatsFunctions(data[bins == b]).percentiles(50) 
+                           for b in N_bins]
+            output_table['mean'] = median_list
+            for p in percentiles:
+                percentile_list = [StatsFunctions(data[bins == b]).percentiles(p) 
+                           for b in N_bins]
+                output_table['{} percentile'.format(p)] = percentile_list
+        
+        else:
+            median_list = [StatsFunctions(data[bins == b],weights[bins==b]).percentiles(50) 
+                           for b in N_bins]
+            output_table['mean'] = median_list
+            for p in percentiles:
+                percentile_list = [StatsFunctions(data[bins == b],weights[bins==b]).percentiles(p) 
+                                   for b in N_bins]
+                output_table['{} percentile'.format(p)] = percentile_list
+
         return output_table
-
-
-    def mean_and_deviation(self,data,bins):
+      
+    def median_and_error(self,sigmas=1):
+        data = self.data
+        bins = self.bins
+        weights = self.weights
+        sigmas = self.list_(sigmas)
+        
         output_table = Table()
         N_bins = np.unique(bins)
-        N_bins = N_bins[N_bins > 0]
-        means = [np.mean(data[bins == b]) for b in N_bins]
-        maxs = [np.max(data[bins == b]) for b in N_bins]
-        mins = [np.min(data[bins == b]) for b in N_bins]
-        output_table['mean'] = means
-        output_table['max'] = maxs
-        output_table['min'] = mins
-        standard_deviations = [np.mean(data[bins == b]) for b in N_bins]
-        for s in self.sigmas:
-            output_table['mean-{}sigma'.format(s)] = [means[i]-s*standard_deviations[i] 
-                                                      for i, _ in enumerate(means)]
-            output_table['mean+{}sigma'.format(s)] = [means[i]+s*standard_deviations[i] 
-                                                      for i, _ in enumerate(means)]
-        return output_table
+        N_bins = N_bins[N_bins > 0]       
         
+        if weights is None:
+            median_list = [StatsFunctions(data[bins == b]).percentiles(50) 
+                           for b in N_bins]
+            output_table['mean'] = median_list
+            meanstd_ = [StatsFunctions(data[bins == b]).mean_and_deviation() 
+                        for b in N_bins]
         
-    def mean_and_error(self,data,bins):
-        output_table = Table()
-        N_bins = np.unique(bins)
-        N_bins = N_bins[N_bins > 0]
-        means = [np.mean(data[bins == b]) for b in N_bins]
-        maxs = [np.max(data[bins == b]) for b in N_bins]
-        mins = [np.min(data[bins == b]) for b in N_bins]
-        output_table['mean'] = means
-        output_table['max'] = maxs
-        output_table['min'] = mins
-        standard_errors = [np.std(data[bins == b])/np.sqrt(np.sum(bins == b)) 
-			   for b in N_bins]
-        for s in self.sigmas:
-            output_table['mean-{}sigma'.format(s)] = [means[i]-s*standard_errors[i] 
-                                                      for i, _ in enumerate(means)]
-            output_table['mean+{}sigma'.format(s)] = [means[i]+s*standard_errors[i] 
-                                                      for i, _ in enumerate(means)]
+        else:
+            median_list = [StatsFunctions(data[bins == b],weights[bins == b]).percentiles(50) 
+                           for b in N_bins]
+            meanstd_ = [StatsFunctions(data[bins == b],weights[bins == b]).mean_and_deviation() 
+                        for b in N_bins]
+            output_table['mean'] = median_list
+        
+        N_array = np.array([(bins==b).sum() for b in N_bins])
+        median_array = np.array(median_list)
+        std_array = np.array([m_[1] for m_ in meanstd_])*1.253 # 1.25*error for median!
+        error_array = std_array/np.sqrt(N_array)
+        for s in sigmas:
+            output_table['mean-{}sigma'.format(s)] = median_array - s*error_array
+            output_table['mean+{}sigma'.format(s)] = median_array + s*error_array
+      
         return output_table
     
+    def mean_and_deviation(self,sigmas=1):
+        data = self.data
+        bins = self.bins
+        weights = self.weights
+        sigmas = self.list_(sigmas)
+        
+        output_table = Table()
+        N_bins = np.unique(bins)
+        N_bins = N_bins[N_bins > 0]
+        
+        if weights is None:
+            meanstd_ = [StatsFunctions(data[bins == b]).mean_and_deviation() 
+                        for b in N_bins]
+        else:
+            meanstd_ = [StatsFunctions(data[bins==b],weights[bins==b]).mean_and_deviation()
+                        for b in N_bins]
+        mean_array = np.array([m_[0] for m_ in meanstd_])
+        std_array = np.array([m_[1] for m_ in meanstd_])
+        
+        output_table['mean'] = mean_array
+        for s in sigmas:
+            output_table['mean-{}sigma'.format(s)] = mean_array - s*std_array
+            output_table['mean+{}sigma'.format(s)] = mean_array + s*std_array
+        return output_table
     
-    def fraction_with_feature(self,data,bins):
+    def mean_and_error(self,sigmas=1):
+        data = self.data
+        bins = self.bins
+        weights = self.weights
+        sigmas = self.list_(sigmas)
+        
+        output_table = Table()
+        N_bins = np.unique(bins)
+        N_bins = N_bins[N_bins > 0]
+        
+        if weights is None:
+            meanstd_ = [StatsFunctions(data[bins == b]).mean_and_deviation() 
+                        for b in N_bins]
+        else:
+            meanstd_ = [StatsFunctions(data[bins==b],weights[bins==b]).mean_and_deviation()
+                        for b in N_bins]
+        mean_array = np.array([m_[0] for m_ in meanstd_])
+        std_array = np.array([m_[1] for m_ in meanstd_])
+        N_array = np.array([(bins==b).sum() for b in N_bins])
+        error_array = std_array/np.sqrt(N_array)
+        
+        output_table['mean'] = mean_array
+        for s in sigmas:
+            output_table['mean-{}sigma'.format(s)] = mean_array - s*error_array
+            output_table['mean+{}sigma'.format(s)] = mean_array + s*error_array
+        return output_table
+    
+    def fraction_with_feature(self):
+        data = self.data
+        bins = self.bins
+        
         output_table = Table()
         N_bins = np.unique(bins)
         N_bins = N_bins[N_bins > 0]
         n = np.array([np.sum(bins == b) for b in N_bins])
         k = np.array([np.sum(data[bins == b]) for b in N_bins])
         output_table['f'] =k/n
-        for c_ in self.c:
+        for c_ in self.list_(self.c):
             p_lower, p_upper = get_fractional_errors(k,n,c_)
             output_table['f-{}'.format(c_)] = p_lower
             output_table['f+{}'.format(c_)] = p_upper

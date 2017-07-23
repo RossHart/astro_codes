@@ -1,11 +1,10 @@
 import numpy as np
 from sklearn.neighbors.kde import KernelDensity
-from sklearn.grid_search import GridSearchCV
-from sklearn.cross_validation import KFold
+from sklearn.model_selection import GridSearchCV, KFold
 
 def cross_validate(test_data,bandwidths,n_folds=5):
     params = {'bandwidth': bandwidths}
-    kf = KFold(n=len(test_data),n_folds=n_folds,shuffle=True,random_state=0)
+    kf = KFold(n_splits=n_folds,shuffle=True,random_state=0)
     grid = GridSearchCV(KernelDensity(), params,cv=kf)
     grid.fit(test_data)
     return grid.best_estimator_.bandwidth,grid
