@@ -1,4 +1,5 @@
 from astropy.table import Table, column
+import imp
 from bin_statistics import assign_bins, StatsFunctions, TableStats
 import matplotlib.pyplot as plt
 import math
@@ -59,7 +60,22 @@ class x_vs_y:
         self.x_table = TableStats(x,bin_assignments,w).median_and_error()
         self.y_table = TableStats(y,bin_assignments,w).median_and_error()
         return self
-            
+      
+    def fraction_with_feature(self,bin_assignments=None,bins=10,equal_N=False):
+        
+        x = self.x
+        y = self.y
+        w = self.weights
+        x_range = self.x_range
+        y_range = self.y_range
+        if bin_assignments is None:
+            bin_assignments = assign_bins(x,x_range,equal_N,bins)
+        self.x_table = TableStats(x,bin_assignments,w).mean_and_error()
+        self.y_table = TableStats(y,bin_assignments,w).fraction_with_feature()
+        return self
+        
+        
+        
     
     def line_plot(self,ax,offset=0,**kwargs):
         x_plot = np.array(self.x_table['mean'])
