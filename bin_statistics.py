@@ -217,9 +217,9 @@ class TableStats():
         N_bins = N_bins[N_bins > 0]
         n = np.array([np.sum(bins == b) for b in N_bins])
         k = np.array([np.sum(data[bins == b]) for b in N_bins])
-        output_table['f'] =k/n
+        output_table['mean'] =k/n
         for c_ in self.list_(self.c):
             p_lower, p_upper = get_fractional_errors(k,n,c_)
-            output_table['f-{}'.format(c_)] = p_lower
-            output_table['f+{}'.format(c_)] = p_upper
+            output_table['mean-1sigma'] = p_lower
+            output_table['mean+1sigma'] = p_upper
         return output_table
