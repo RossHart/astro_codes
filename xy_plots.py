@@ -16,13 +16,16 @@ class x_vs_y:
         self.x_range = x_range
         self.y_range = y_range
         
-    def discrete_vs_continuous_binned_mean(self):
+    def discrete_vs_continuous_binned_mean(self,spread=False):
         x = self.x
         y = self.y
         w = self.weights
         
         self.x_table = Table(np.unique(x)[:,np.newaxis],names=['mean'])
-        self.y_table = TableStats(y,x,w).mean_and_error()
+        if spread is True:
+            self.y_table = TableStats(y,x,w).mean_and_deviation()
+        else:
+            self.y_table = TableStats(y,x,w).mean_and_error()
         return self
       
     def discrete_vs_continuous_binned_median(self):
@@ -35,7 +38,7 @@ class x_vs_y:
         return self
     
     def continuous_vs_continuous_binned_mean(self,bin_assignments=None,bins=10,
-                                             equal_N=False):
+                                             equal_N=False,spread=False):
         x = self.x
         y = self.y
         w = self.weights
@@ -44,11 +47,13 @@ class x_vs_y:
         if bin_assignments is None:
             bin_assignments = assign_bins(x,x_range,equal_N,bins)
         self.x_table = TableStats(x,bin_assignments,w).mean_and_error()
-        self.y_table = TableStats(y,bin_assignments,w).mean_and_error()
+        if spread is True:
+            self.y_table = TableStats(y,bin_assignments,w).mean_and_deviation()
+        else:
+            self.y_table = TableStats(y,bin_assignments,w).mean_and_error()
         return self
       
-    def continuous_vs_continuous_binned_median(self,bin_assignments=None,bins=10,
-                                               equal_N=False):
+    def continuous_vs_continuous_binned_median(self,bin_assignments=None,bins=10                                               ,equal_N=False,use_dev=False):
       
         x = self.x
         y = self.y
@@ -58,7 +63,12 @@ class x_vs_y:
         if bin_assignments is None:
             bin_assignments = assign_bins(x,x_range,equal_N,bins)
         self.x_table = TableStats(x,bin_assignments,w).median_and_error()
-        self.y_table = TableStats(y,bin_assignments,w).median_and_error()
+        if use_dev is False:
+            self.y_table = TableStats(y,bin_assignments,w).median_and_error()
+        else:
+            self.y_table = TableStats(y,bin_assignments,w).median_and_percentile()
+            self.y_table['mean-1sigma'] = self.y_table['16 percentile']
+            self.y_table['mean+1sigma'] = self.y_table['84 percentile']
         return self
       
     def fraction_with_feature(self,bin_assignments=None,bins=10,equal_N=False):
@@ -159,4 +169,3 @@ class x_vs_y:
     def scatter(self,ax,**kwargs):
         ax.scatter(self.x,self.y,**kwargs)
         return None
-
